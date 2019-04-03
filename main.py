@@ -1,35 +1,60 @@
-# Copyright 2018 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""Simple Bot to reply to Telegram messages.
 
-# [START gae_python37_app]
-from flask import Flask
+This is built on the API wrapper, see echobot2.py to see the same example built
+on the telegram.ext bot framework.
+This program is dedicated to the public domain under the CC0 license.
+"""
+from google.appengine.api import urlfetch
+from google.appengine.ext import ndb
 
-
-# If `entrypoint` is not defined in app.yaml, App Engine will look for an app
-# called `app` in `main.py`.
-app = Flask(__name__)
+import webapp2
+import logging
+import telegram
+from telegram.error import NetworkError, Unauthorized
+from time import sleep
 
 
-@app.route('/')
-def hello():
-    """Return a friendly HTTP greeting."""
-    return 'Hello World!'
+update_id = None
+
+
+def main():
+    """Run the bot."""
+    global update_id
+    # Telegram Bot Authorization Token
+    bot = telegram.Bot('869916009:AAEYrIlwDAlSLyJ6SsOEzjv-rEw6FJpW8VM')
+
+    # get the first pending update_id, this is so we can skip over it in case
+    # we get an "Unauthorized" exception.
+    try:
+        update_id = bot.get_updates()[0].update_id
+    except IndexError:
+        update_id = None
+
+    logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    while True:
+        try:
+            echo(bot)
+        except NetworkError:
+            sleep(1)
+        except Unauthorized:
+            # The user has removed or blocked the bot.
+            update_id += 1
+
+
+def echo(bot):
+    """Echo the message the user sent."""
+    global update_id
+    # Request updates after the last update_id
+    for update in bot.get_updates(offset=update_id, timeout=10):
+        update_id = update.update_id + 1
+
+        if update.message:  # your bot can receive updates without messages
+            # Reply to the message
+            update.message.reply_text(update.message.text)
 
 
 if __name__ == '__main__':
-    # This is used when running locally only. When deploying to Google App
-    # Engine, a webserver process such as Gunicorn will serve the app. This
-    # can be configured by adding an `entrypoint` to app.yaml.
-    app.run(host='127.0.0.1', port=8080, debug=True)
-# [END gae_python37_app]
+    main()
