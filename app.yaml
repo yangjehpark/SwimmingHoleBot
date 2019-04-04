@@ -1,13 +1,14 @@
-application: swimmingholebot
-version: 2
+# application: swimmingholebot
 runtime: python27
-api_version: 1
 threadsafe: yes
+# version: 10
 
 handlers:
 - url: .*
-  script: main.app
+  script: simpleechobot.app
 
 libraries:
 - name: webapp2
   version: 2.5.2
+- name: ssl
+  version: latest
